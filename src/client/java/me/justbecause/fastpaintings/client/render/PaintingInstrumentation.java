@@ -105,7 +105,7 @@ public final class PaintingInstrumentation {
         public String toFormattedString() {
             return String.format(
                     """
-                    Fast Paintings:
+                    Really Fast Paintings:
 
                     Render checks:                 %d
                     Extracted:                     %d

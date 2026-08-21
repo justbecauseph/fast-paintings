@@ -93,7 +93,7 @@ modrinth {
     projectId = System.getenv("MODRINTH_PROJECT_ID")
 
     versionNumber = project.version.toString()
-    versionName = "Fast Paintings ${project.version}"
+    versionName = "Really Fast Paintings ${project.version}"
     versionType = System.getenv("MODRINTH_VERSION_TYPE") ?: "release"
 
     // Minecraft 26.2 uses the unobfuscated Loom plugin; the normal jar is the distributable artifact.

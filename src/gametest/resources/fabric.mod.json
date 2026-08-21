@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "fastpaintings-gametest",
   "version": "1.0.0",
-  "name": "Fast Paintings Game Tests",
+  "name": "Really Fast Paintings Game Tests",
   "environment": "*",
   "entrypoints": {
     "fabric-gametest": [

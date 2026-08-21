@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "fastpaintings",
   "version": "${version}",
-  "name": "Fast Paintings",
+  "name": "Really Fast Paintings",
   "description": "Converts paintings into non-ticking block-backed decorations for improved performance.",
   "authors": [
     "justbecause"

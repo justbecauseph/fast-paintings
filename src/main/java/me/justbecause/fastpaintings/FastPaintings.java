@@ -17,7 +17,7 @@ public class FastPaintings implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Initializing Fast Paintings for Minecraft 26.2...");
+        LOGGER.info("Initializing Really Fast Paintings for Minecraft 26.2...");
         CONFIG = FastPaintingsConfig.load();
         ModRegistry.init();
         PaintingEntityHandler.init();

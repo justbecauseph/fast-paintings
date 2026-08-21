@@ -1,11 +1,11 @@
-# Fast Paintings
+# Really Fast Paintings
 
 [![Minecraft](https://img.shields.io/badge/Minecraft-26.2-brightgreen.svg)](https://minecraft.net/)
 [![Fabric API](https://img.shields.io/badge/Fabric%20API-0.158.0%2B26.2-blue.svg)](https://fabricmc.net/)
 [![Java](https://img.shields.io/badge/Java-25-orange.svg)](https://openjdk.org/)
 [![License](https://img.shields.io/badge/License-MPL--2.0-blue.svg)](LICENSE)
 
-**Fast Paintings** is a Fabric performance mod for Minecraft 26.2 that replaces vanilla `Painting` entities with non-ticking, block-backed decorations while preserving vanilla painting variants, placement behavior, collision/raycast interaction, support checks, and datapack-defined painting dimensions.
+**Really Fast Paintings** is a Fabric performance mod for Minecraft 26.2 that replaces vanilla `Painting` entities with non-ticking, block-backed decorations while preserving vanilla painting variants, placement behavior, collision/raycast interaction, support checks, and datapack-defined painting dimensions.
 
 Each converted painting uses a single logical `PaintingBlockEntity` at its anchor and lightweight non-ticking part blocks for the rest of its footprint. This removes the need to keep a full entity alive for every painting while still allowing large paintings to behave like normal wall decorations.
 
@@ -28,7 +28,7 @@ Each converted painting uses a single logical `PaintingBlockEntity` at its ancho
 
 ## 🎨 Client Rendering & LOD
 
-Fast Paintings uses a custom `PaintingBlockRenderer` with projected-screen-size LOD selection and hysteresis to reduce geometry and lighting work as paintings become smaller on screen.
+Really Fast Paintings uses a custom `PaintingBlockRenderer` with projected-screen-size LOD selection and hysteresis to reduce geometry and lighting work as paintings become smaller on screen.
 
 | LOD | Representation |
 | :--- | :--- |
@@ -50,17 +50,17 @@ Promotion/demotion hysteresis uses separate thresholds to reduce visible LOD fli
 
 ## 🌄 Distant Decorations Integration
 
-Fast Paintings has optional integration with **[Distant Decorations](https://github.com/justbecauseph/distant-decorations)**.
+Really Fast Paintings has optional integration with **[Distant Decorations](https://github.com/justbecauseph/distant-decorations)**.
 
 When Distant Decorations is installed:
 
-- Fast Paintings registers its own lightweight server-side decoration provider.
+- Really Fast Paintings registers its own lightweight server-side decoration provider.
 - Only painting metadata is synchronized through DD: asset ID, facing, width, and height.
 - Physical bounds are calculated from the same `PaintingFootprint` geometry used by the live painting implementation.
 - The distant client renderer uses the vanilla painting atlas and submits a single front-facing quad.
 - The DD renderer opts into a `0.01 px` projected-size culling threshold and can apply up to `16×` visual-only far-LOD scaling to keep extremely distant paintings rasterizable without changing their authoritative physical AABB.
 
-Distant Decorations is optional; Fast Paintings runs normally without it.
+Distant Decorations is optional; Really Fast Paintings runs normally without it.
 
 ---
 
@@ -85,7 +85,7 @@ config/fastpaintings.json
 
 ## 🛠️ Commands
 
-All Fast Paintings commands require gamemaster-level command permission.
+All Really Fast Paintings commands require gamemaster-level command permission.
 
 - `/fastpaintings stats`
   - Displays the total number of currently loaded vanilla painting entities across all worlds.
@@ -145,4 +145,4 @@ The project targets:
 
 ## 📄 License
 
-Fast Paintings is licensed under the [Mozilla Public License 2.0 (MPL-2.0)](LICENSE).
+Really Fast Paintings is licensed under the [Mozilla Public License 2.0 (MPL-2.0)](LICENSE).
