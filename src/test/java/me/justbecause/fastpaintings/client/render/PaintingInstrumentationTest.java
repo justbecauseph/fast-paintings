@@ -16,9 +16,10 @@ class PaintingInstrumentationTest {
     @Test
     @DisplayName("Reset clears all cumulative metrics counters")
     void testReset() {
-        PaintingInstrumentation.totalLoaded = 100;
+        PaintingInstrumentation.totalRenderChecks = 100;
         PaintingInstrumentation.totalExtractions = 90;
         PaintingInstrumentation.totalEarlyFrustumRejects = 50;
+        PaintingInstrumentation.totalExtractionFrustumRejects = 10;
         PaintingInstrumentation.totalLateFrustumRejects = 5;
         PaintingInstrumentation.totalSkipCount = 20;
         PaintingInstrumentation.totalFarCount = 10;
@@ -32,9 +33,10 @@ class PaintingInstrumentationTest {
 
         PaintingInstrumentation.reset();
 
-        assertEquals(0, PaintingInstrumentation.totalLoaded);
+        assertEquals(0, PaintingInstrumentation.totalRenderChecks);
         assertEquals(0, PaintingInstrumentation.totalExtractions);
         assertEquals(0, PaintingInstrumentation.totalEarlyFrustumRejects);
+        assertEquals(0, PaintingInstrumentation.totalExtractionFrustumRejects);
         assertEquals(0, PaintingInstrumentation.totalLateFrustumRejects);
         assertEquals(0, PaintingInstrumentation.totalSkipCount);
         assertEquals(0, PaintingInstrumentation.totalFarCount);
@@ -50,31 +52,39 @@ class PaintingInstrumentationTest {
     @Test
     @DisplayName("Snapshots calculate deltas accurately for benchmark windows")
     void testSnapshotDelta() {
-        PaintingInstrumentation.totalLoaded = 100;
+        PaintingInstrumentation.totalRenderChecks = 100;
         PaintingInstrumentation.totalExtractions = 80;
         PaintingInstrumentation.totalEarlyFrustumRejects = 20;
+        PaintingInstrumentation.totalExtractionFrustumRejects = 5;
+        PaintingInstrumentation.totalSkipCount = 15;
         PaintingInstrumentation.totalPerBlockLightSamples = 256;
 
         PaintingInstrumentation.Snapshot start = PaintingInstrumentation.takeSnapshot();
 
         // Simulate benchmark frames
-        PaintingInstrumentation.totalLoaded += 3000;
+        PaintingInstrumentation.totalRenderChecks += 3000;
         PaintingInstrumentation.totalExtractions += 600;
         PaintingInstrumentation.totalEarlyFrustumRejects += 2400;
+        PaintingInstrumentation.totalExtractionFrustumRejects += 25;
+        PaintingInstrumentation.totalSkipCount += 310;
         PaintingInstrumentation.totalPerBlockLightSamples += 512;
 
         PaintingInstrumentation.Snapshot end = PaintingInstrumentation.takeSnapshot();
         PaintingInstrumentation.Snapshot delta = end.delta(start);
 
-        assertEquals(3000, delta.loaded());
+        assertEquals(3000, delta.renderChecks());
         assertEquals(600, delta.extractions());
         assertEquals(2400, delta.earlyFrustumRejects());
+        assertEquals(25, delta.extractionFrustumRejects());
+        assertEquals(310, delta.skipCount());
         assertEquals(512, delta.perBlockLightSamples());
 
         String formatted = delta.toFormattedString();
-        assertTrue(formatted.contains("Loaded:                   3000"));
-        assertTrue(formatted.contains("Extracted:                600"));
-        assertTrue(formatted.contains("Early frustum rejects:    2400"));
-        assertTrue(formatted.contains("Per-block light samples:  512"));
+        assertTrue(formatted.contains("Render checks:                 3000"));
+        assertTrue(formatted.contains("Extracted:                     600"));
+        assertTrue(formatted.contains("Early frustum rejects:         2400"));
+        assertTrue(formatted.contains("Extraction frustum rejects:    25"));
+        assertTrue(formatted.contains("Subpixel SKIP:                 310"));
+        assertTrue(formatted.contains("Per-block light samples:       512"));
     }
 }

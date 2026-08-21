@@ -89,7 +89,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
         if (metrics.currentFrustum != null && state.renderBoundingBox != null && !metrics.currentFrustum.isVisible(state.renderBoundingBox)) {
             state.lod = PaintingBlockRenderState.Lod.SKIP;
             if (PaintingInstrumentation.isEnabled()) {
-                PaintingInstrumentation.totalSkipCount++;
+                PaintingInstrumentation.totalExtractionFrustumRejects++;
             }
             return;
         }
@@ -501,7 +501,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
     @Override
     public boolean shouldRender(PaintingBlockEntity blockEntity, Vec3 cameraPos) {
         if (PaintingInstrumentation.isEnabled()) {
-            PaintingInstrumentation.totalLoaded++;
+            PaintingInstrumentation.totalRenderChecks++;
         }
 
         if (blockEntity.isRemoved() || blockEntity.getLevel() == null) {

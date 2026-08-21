@@ -10,9 +10,10 @@ public final class PaintingInstrumentation {
     public static boolean forceEnabled = false;
 
     // Cumulative counters (long) for reliable profiling and snapshot diffing
-    public static long totalLoaded;
+    public static long totalRenderChecks;
     public static long totalExtractions;
     public static long totalEarlyFrustumRejects;
+    public static long totalExtractionFrustumRejects;
     public static long totalLateFrustumRejects;
     public static long totalSkipCount;
     public static long totalFarCount;
@@ -31,9 +32,10 @@ public final class PaintingInstrumentation {
     }
 
     public static void reset() {
-        totalLoaded = 0;
+        totalRenderChecks = 0;
         totalExtractions = 0;
         totalEarlyFrustumRejects = 0;
+        totalExtractionFrustumRejects = 0;
         totalLateFrustumRejects = 0;
         totalSkipCount = 0;
         totalFarCount = 0;
@@ -48,9 +50,10 @@ public final class PaintingInstrumentation {
 
     public static Snapshot takeSnapshot() {
         return new Snapshot(
-                totalLoaded,
+                totalRenderChecks,
                 totalExtractions,
                 totalEarlyFrustumRejects,
+                totalExtractionFrustumRejects,
                 totalLateFrustumRejects,
                 totalSkipCount,
                 totalFarCount,
@@ -65,9 +68,10 @@ public final class PaintingInstrumentation {
     }
 
     public record Snapshot(
-            long loaded,
+            long renderChecks,
             long extractions,
             long earlyFrustumRejects,
+            long extractionFrustumRejects,
             long lateFrustumRejects,
             long skipCount,
             long farCount,
@@ -81,9 +85,10 @@ public final class PaintingInstrumentation {
     ) {
         public Snapshot delta(Snapshot previous) {
             return new Snapshot(
-                    this.loaded - previous.loaded,
+                    this.renderChecks - previous.renderChecks,
                     this.extractions - previous.extractions,
                     this.earlyFrustumRejects - previous.earlyFrustumRejects,
+                    this.extractionFrustumRejects - previous.extractionFrustumRejects,
                     this.lateFrustumRejects - previous.lateFrustumRejects,
                     this.skipCount - previous.skipCount,
                     this.farCount - previous.farCount,
@@ -102,24 +107,26 @@ public final class PaintingInstrumentation {
                     """
                     Fast Paintings:
 
-                    Loaded:                   %d
-                    Extracted:                %d
-                    Early frustum rejects:    %d
-                    Late frustum rejects:     %d
-                    SKIP:                     %d
-                    FAR:                      %d
-                    SIMPLIFIED:               %d
-                    FULL:                     %d
+                    Render checks:                 %d
+                    Extracted:                     %d
+                    Early frustum rejects:         %d
+                    Extraction frustum rejects:    %d
+                    Late frustum rejects:          %d
+                    Subpixel SKIP:                 %d
+                    FAR:                           %d
+                    SIMPLIFIED:                    %d
+                    FULL:                          %d
 
-                    Per-block light samples:  %d
-                    Single light samples:     %d
-                    Geometry submissions:     %d
-                    Quads submitted:          %d
-                    Vertices submitted:       %d
+                    Per-block light samples:       %d
+                    Single light samples:          %d
+                    Geometry submissions:          %d
+                    Quads submitted:               %d
+                    Vertices submitted:            %d
                     """,
-                    loaded,
+                    renderChecks,
                     extractions,
                     earlyFrustumRejects,
+                    extractionFrustumRejects,
                     lateFrustumRejects,
                     skipCount,
                     farCount,
