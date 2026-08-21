@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "me.justbecause.fastpaintings.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "HangingEntityItemMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

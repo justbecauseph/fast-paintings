@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "fastpaintings",
+  "version": "${version}",
+  "name": "Fast Paintings",
+  "description": "Converts paintings into non-ticking block-backed decorations for improved performance.",
+  "authors": [
+    "justbecause"
+  ],
+  "contact": {},
+  "license": "MPL-2.0",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "me.justbecause.fastpaintings.FastPaintings"
+    ],
+    "client": [
+      "me.justbecause.fastpaintings.client.FastPaintingsClient"
+    ]
+  },
+  "mixins": [
+    "fastpaintings.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
