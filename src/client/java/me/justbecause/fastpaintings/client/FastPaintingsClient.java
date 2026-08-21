@@ -13,5 +13,9 @@ public class FastPaintingsClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         BlockEntityRenderers.register(ModRegistry.PAINTING_BLOCK_ENTITY, PaintingBlockRenderer::new);
+
+        if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("distantdecorations")) {
+            me.justbecause.fastpaintings.client.compat.distantdecorations.FastPaintingDistantDecorationRenderer.init();
+        }
     }
 }

@@ -22,6 +22,10 @@ public class FastPaintings implements ModInitializer {
         ModRegistry.init();
         PaintingEntityHandler.init();
         PaintingMigrationCommand.init();
+
+        if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("distantdecorations")) {
+            me.justbecause.fastpaintings.compat.distantdecorations.FastPaintingDistantDecorationProvider.init();
+        }
     }
 
     public static Identifier id(String path) {
