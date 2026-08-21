@@ -52,7 +52,7 @@ jobs:
           fi
 
       - name: Build and test
-        run: ./gradlew --refresh-dependencies clean build
+        run: ./gradlew clean build
 
       - name: Publish to Modrinth
         env:
