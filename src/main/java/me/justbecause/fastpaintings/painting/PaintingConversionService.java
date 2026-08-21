@@ -22,12 +22,14 @@ public final class PaintingConversionService {
         if (FastPaintings.CONFIG.skipSpecialEntityData) {
             if (painting.hasCustomName() || painting.isInvulnerable() || painting.hasGlowingTag()) {
                 FastPaintings.LOGGER.debug("Skipping conversion of painting at {}: special entity properties present",
-                        painting.blockPosition());
+                        painting.getPos());
                 return false;
             }
         }
 
-        BlockPos anchorPos = painting.blockPosition();
+        // Critical: BlockAttachedEntity#getPos() is the authoritative attachment anchor BlockPos.
+        // Entity center blockPosition() is offset by 0.5 for even dimensions and floors to the wrong cell.
+        BlockPos anchorPos = painting.getPos();
         Direction facing = painting.getDirection();
         Holder<PaintingVariant> variant = painting.getVariant();
 
@@ -54,7 +56,11 @@ public final class PaintingConversionService {
             }
         }
 
-        boolean success = PaintingPlacementService.placePaintingBlocks(serverLevel, footprint, variant, null);
+        // Transactional placement in MIGRATION mode (silent, no physics storms), ignoring the current entity during overlap check
+        boolean success = PaintingPlacementService.placePaintingBlocksTransactional(
+                serverLevel, footprint, variant, null, PaintingPlacementService.PlacementMode.MIGRATION
+        );
+
         if (success) {
             painting.kill(serverLevel);
             FastPaintings.LOGGER.debug("Successfully converted painting at {} to block-backed decoration", anchorPos);

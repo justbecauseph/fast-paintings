@@ -27,7 +27,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -47,6 +46,13 @@ public class PaintingBlockEntity extends BlockEntity {
 
     public PaintingBlockEntity(BlockPos pos, BlockState state) {
         super(ModRegistry.PAINTING_BLOCK_ENTITY, pos, state);
+    }
+
+    @Override
+    public void setBlockState(BlockState blockState) {
+        super.setBlockState(blockState);
+        this.cachedFootprint = null;
+        this.cachedRenderBox = null;
     }
 
     public Direction getFacing() {
@@ -95,8 +101,17 @@ public class PaintingBlockEntity extends BlockEntity {
         return box != null ? box : new AABB(this.worldPosition);
     }
 
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (this.level instanceof ServerLevel serverLevel && !this.isRemoving) {
+            this.removeFootprint(serverLevel, true, null);
+        }
+    }
+
     /**
-     * Safely destroys all blocks in this painting's multi-block footprint, preventing recursive removal.
+     * Safely destroys all blocks in this painting's multi-block footprint,
+     * preserving water sources and preventing recursive removal.
      */
     public void removeFootprint(Level level, boolean dropItem, @Nullable Entity causedBy) {
         if (this.isRemoving) {
@@ -110,7 +125,7 @@ public class PaintingBlockEntity extends BlockEntity {
             this.dropItem(serverLevel, causedBy);
         }
 
-        // Remove all helper parts and this anchor
+        // 1. Remove all helper parts and restore their fluid state (preserving water)
         for (BlockPos pos : footprint.occupiedCells()) {
             if (pos.equals(this.worldPosition)) {
                 continue;
@@ -120,14 +135,15 @@ public class PaintingBlockEntity extends BlockEntity {
             }
             BlockState cellState = level.getBlockState(pos);
             if (cellState.is(ModRegistry.PAINTING_PART_BLOCK)) {
-                BlockPos anchorPos = PaintingPartBlock.getAnchorPos(pos, cellState);
-                if (this.worldPosition.equals(anchorPos)) {
-                    level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
-                }
+                BlockState replacement = cellState.getFluidState().createLegacyBlock();
+                level.setBlock(pos, replacement, Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
             }
         }
 
-        level.setBlock(this.worldPosition, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
+        // 2. Remove anchor and restore its fluid state
+        BlockState anchorState = level.getBlockState(this.worldPosition);
+        BlockState anchorReplacement = anchorState.getFluidState().createLegacyBlock();
+        level.setBlock(this.worldPosition, anchorReplacement, Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
     }
 
     public void dropItem(ServerLevel serverLevel, @Nullable Entity causedBy) {

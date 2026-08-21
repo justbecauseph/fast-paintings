@@ -4,16 +4,17 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import me.justbecause.fastpaintings.block.entity.PaintingBlockEntity;
 import me.justbecause.fastpaintings.painting.PaintingConversionService;
-import net.fabricmc.api.EnvType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
-import net.minecraft.core.BlockPos;
+import net.minecraft.core.SectionPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.decoration.painting.Painting;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -43,18 +44,20 @@ public final class PaintingMigrationCommand {
 
     private static int runStats(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
-        ServerLevel level = source.getLevel();
+        int totalEntities = 0;
+        int totalBlockPaintings = 0;
 
-        int paintingEntitiesCount = 0;
-        for (Entity entity : level.getAllEntities()) {
-            if (entity instanceof Painting) {
-                paintingEntitiesCount++;
+        for (ServerLevel level : source.getServer().getAllLevels()) {
+            for (Entity entity : level.getAllEntities()) {
+                if (entity.getType() == EntityTypes.PAINTING) {
+                    totalEntities++;
+                }
             }
         }
 
-        final int finalCount = paintingEntitiesCount;
+        final int entities = totalEntities;
         source.sendSuccess(() -> Component.literal(
-                String.format("§6[FastPaintings]§r Loaded Painting Entities in current dimension: §e%d§r", finalCount)
+                String.format("§6[FastPaintings]§r Total loaded vanilla painting entities across all worlds: §e%d§r", entities)
         ), false);
 
         return 1;
@@ -62,25 +65,26 @@ public final class PaintingMigrationCommand {
 
     private static int runConvert(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
-        ServerLevel level = source.getLevel();
-
         int converted = 0;
-        List<Painting> paintings = new ArrayList<>();
-        for (Entity entity : level.getAllEntities()) {
-            if (entity instanceof Painting painting) {
-                paintings.add(painting);
-            }
-        }
 
-        for (Painting painting : paintings) {
-            if (PaintingConversionService.tryConvert(painting, level)) {
-                converted++;
+        for (ServerLevel level : source.getServer().getAllLevels()) {
+            List<Painting> paintings = new ArrayList<>();
+            for (Entity entity : level.getAllEntities()) {
+                if (entity.getType() == EntityTypes.PAINTING && entity instanceof Painting painting) {
+                    paintings.add(painting);
+                }
+            }
+
+            for (Painting painting : paintings) {
+                if (PaintingConversionService.tryConvert(painting, level)) {
+                    converted++;
+                }
             }
         }
 
         final int count = converted;
         source.sendSuccess(() -> Component.literal(
-                String.format("§6[FastPaintings]§r Converted §a%d§r painting entities to block-backed paintings.", count)
+                String.format("§6[FastPaintings]§r Converted §a%d§r painting entities across all dimensions to block-backed paintings.", count)
         ), true);
 
         return converted;
@@ -88,23 +92,51 @@ public final class PaintingMigrationCommand {
 
     private static int runRestore(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
-        ServerLevel level = source.getLevel();
-
         int restored = 0;
-        if (source.getEntity() instanceof ServerPlayer player) {
-            BlockPos playerPos = player.blockPosition();
-            int chunkRadius = 8;
-            int playerChunkX = playerPos.getX() >> 4;
-            int playerChunkZ = playerPos.getZ() >> 4;
+        int skipped = 0;
 
+        Iterable<ServerLevel> levels = (source.getEntity() instanceof ServerPlayer player)
+                ? List.of(player.level())
+                : source.getServer().getAllLevels();
+
+        for (ServerLevel level : levels) {
             List<PaintingBlockEntity> toRestore = new ArrayList<>();
-            for (int cx = playerChunkX - chunkRadius; cx <= playerChunkX + chunkRadius; cx++) {
-                for (int cz = playerChunkZ - chunkRadius; cz <= playerChunkZ + chunkRadius; cz++) {
-                    if (level.hasChunk(cx, cz)) {
-                        LevelChunk chunk = level.getChunk(cx, cz);
-                        for (BlockEntity be : chunk.getBlockEntities().values()) {
-                            if (be instanceof PaintingBlockEntity pbe) {
-                                toRestore.add(pbe);
+
+            // Find all loaded PaintingBlockEntity instances
+            if (source.getEntity() instanceof ServerPlayer player && level == player.level()) {
+                int chunkRadius = 16;
+                int playerChunkX = SectionPos.blockToSectionCoord(player.getBlockX());
+                int playerChunkZ = SectionPos.blockToSectionCoord(player.getBlockZ());
+                for (int cx = playerChunkX - chunkRadius; cx <= playerChunkX + chunkRadius; cx++) {
+                    for (int cz = playerChunkZ - chunkRadius; cz <= playerChunkZ + chunkRadius; cz++) {
+                        if (level.getChunkSource().hasChunk(cx, cz)) {
+                            LevelChunk chunk = level.getChunkSource().getChunk(cx, cz, false);
+                            if (chunk != null) {
+                                for (BlockEntity be : chunk.getBlockEntities().values()) {
+                                    if (be instanceof PaintingBlockEntity pbe) {
+                                        toRestore.add(pbe);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Console global execution across all loaded chunks
+                for (ServerPlayer p : level.players()) {
+                    int pChunkX = SectionPos.blockToSectionCoord(p.getBlockX());
+                    int pChunkZ = SectionPos.blockToSectionCoord(p.getBlockZ());
+                    for (int cx = pChunkX - 16; cx <= pChunkX + 16; cx++) {
+                        for (int cz = pChunkZ - 16; cz <= pChunkZ + 16; cz++) {
+                            if (level.getChunkSource().hasChunk(cx, cz)) {
+                                LevelChunk chunk = level.getChunkSource().getChunk(cx, cz, false);
+                                if (chunk != null) {
+                                    for (BlockEntity be : chunk.getBlockEntities().values()) {
+                                        if (be instanceof PaintingBlockEntity pbe && !toRestore.contains(pbe)) {
+                                            toRestore.add(pbe);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -114,13 +146,16 @@ public final class PaintingMigrationCommand {
             for (PaintingBlockEntity pbe : toRestore) {
                 if (PaintingConversionService.tryRestore(pbe, level)) {
                     restored++;
+                } else {
+                    skipped++;
                 }
             }
         }
 
         final int count = restored;
+        final int skippedCount = skipped;
         source.sendSuccess(() -> Component.literal(
-                String.format("§6[FastPaintings]§r Restored §a%d§r block-backed paintings to vanilla entities.", count)
+                String.format("§6[FastPaintings]§r Restored §a%d§r block-backed paintings back to vanilla entities (Skipped: %d).", count, skippedCount)
         ), true);
 
         return restored;

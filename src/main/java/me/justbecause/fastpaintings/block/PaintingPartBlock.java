@@ -3,7 +3,6 @@ package me.justbecause.fastpaintings.block;
 import com.mojang.serialization.MapCodec;
 import me.justbecause.fastpaintings.block.entity.PaintingBlockEntity;
 import me.justbecause.fastpaintings.init.ModRegistry;
-import me.justbecause.fastpaintings.painting.PaintingFootprint;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
@@ -28,7 +27,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.material.MapColor;
@@ -41,21 +39,21 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
+/**
+ * Lightweight, non-ticking helper part block for multi-block paintings.
+ * Contains only 8 block states (FACING x WATERLOGGED), eliminating chunk palette bloat.
+ */
 public class PaintingPartBlock extends HorizontalDirectionalBlock implements SimpleWaterloggedBlock {
 
     public static final MapCodec<PaintingPartBlock> CODEC = simpleCodec(PaintingPartBlock::new);
 
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
-    public static final IntegerProperty OFFSET_X = IntegerProperty.create("offset_x", 0, 15);
-    public static final IntegerProperty OFFSET_Y = IntegerProperty.create("offset_y", 0, 15);
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
 
     public PaintingPartBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
-                .setValue(OFFSET_X, PaintingFootprint.ANCHOR_OFFSET_INDEX)
-                .setValue(OFFSET_Y, PaintingFootprint.ANCHOR_OFFSET_INDEX)
                 .setValue(WATERLOGGED, Boolean.FALSE));
     }
 
@@ -71,13 +69,6 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
                 .isRedstoneConductor((state, level, pos) -> false));
     }
 
-    public static BlockPos getAnchorPos(BlockPos pos, BlockState state) {
-        Direction facing = state.getValue(FACING);
-        int offsetX = state.getValue(OFFSET_X);
-        int offsetY = state.getValue(OFFSET_Y);
-        return PaintingFootprint.getAnchorPos(pos, facing, offsetX, offsetY);
-    }
-
     @Override
     protected MapCodec<? extends HorizontalDirectionalBlock> codec() {
         return CODEC;
@@ -85,7 +76,7 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, OFFSET_X, OFFSET_Y, WATERLOGGED);
+        builder.add(FACING, WATERLOGGED);
     }
 
     @Override
@@ -115,16 +106,50 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
         return backingState.isSolid() || DiodeBlock.isDiode(backingState);
     }
 
+    /**
+     * Resolves the anchor position of this part block within its bounded 16x16 plane.
+     * Returns null if no owning anchor exists (orphan part), allowing self-healing.
+     */
+    public static @Nullable BlockPos findAnchorPos(LevelReader level, BlockPos partPos, BlockState partState) {
+        Direction facing = partState.getValue(FACING);
+        Direction left = facing.getCounterClockWise();
+
+        BlockPos.MutableBlockPos candidate = new BlockPos.MutableBlockPos();
+        // Check closest distances first for fastest lookup
+        for (int r = 0; r <= 15; r++) {
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dy)) != r) {
+                        continue; // Only check outer perimeter of radius r
+                    }
+                    boolean loaded = (level instanceof Level lvl) ? lvl.isLoaded(candidate) : level.hasChunkAt(candidate);
+                    if (loaded) {
+                        BlockState state = level.getBlockState(candidate);
+                        if (state.is(ModRegistry.PAINTING_BLOCK) && state.getValue(PaintingBlock.FACING) == facing) {
+                            if (level.getBlockEntity(candidate) instanceof PaintingBlockEntity be) {
+                                if (be.getFootprint().occupiedCells().contains(partPos)) {
+                                    return candidate.immutable();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock, @Nullable Orientation orientation, boolean movedByPiston) {
         if (!level.isClientSide()) {
-            if (!this.canSurvive(state, level, pos)) {
-                BlockPos anchorPos = getAnchorPos(pos, state);
-                if (level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be) {
+            BlockPos anchorPos = findAnchorPos(level, pos, state);
+            if (anchorPos != null && level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be) {
+                if (!be.getFootprint().isSupported(level)) {
                     be.removeFootprint(level, true, null);
-                } else {
-                    level.removeBlock(pos, false);
                 }
+            } else {
+                // Orphan helper part self-healing: restore fluid state
+                level.setBlock(pos, state.getFluidState().createLegacyBlock(), Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
             }
         }
     }
@@ -132,9 +157,11 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide()) {
-            BlockPos anchorPos = getAnchorPos(pos, state);
-            if (level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be) {
+            BlockPos anchorPos = findAnchorPos(level, pos, state);
+            if (anchorPos != null && level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be) {
                 be.removeFootprint(level, !player.isCreative(), player);
+            } else {
+                level.setBlock(pos, state.getFluidState().createLegacyBlock(), Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
             }
         }
         return super.playerWillDestroy(level, pos, state, player);
@@ -146,17 +173,19 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
         if (level instanceof ServerLevel serverLevel
                 && projectile.mayInteract(serverLevel, pos)
                 && projectile.mayBreak(serverLevel)) {
-            BlockPos anchorPos = getAnchorPos(pos, state);
-            if (level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be) {
+            BlockPos anchorPos = findAnchorPos(level, pos, state);
+            if (anchorPos != null && level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be) {
                 be.removeFootprint(level, true, projectile);
+            } else {
+                level.setBlock(pos, state.getFluidState().createLegacyBlock(), Block.UPDATE_ALL | Block.UPDATE_SUPPRESS_DROPS);
             }
         }
     }
 
     @Override
     protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
-        BlockPos anchorPos = getAnchorPos(pos, state);
-        if (level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be) {
+        BlockPos anchorPos = findAnchorPos(level, pos, state);
+        if (anchorPos != null && level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be) {
             be.removeFootprint(level, true, null);
         }
         super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
@@ -165,7 +194,7 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
     @Override
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         if (direction.getOpposite() == state.getValue(FACING) && !this.canSurvive(state, level, pos)) {
-            return Blocks.AIR.defaultBlockState();
+            return state.getFluidState().createLegacyBlock();
         }
         if (state.getValue(WATERLOGGED)) {
             scheduledTickAccess.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
@@ -181,8 +210,8 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
     @Override
     protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         ItemStack stack = new ItemStack(Items.PAINTING);
-        BlockPos anchorPos = getAnchorPos(pos, state);
-        if (level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be && be.getVariant() != null) {
+        BlockPos anchorPos = findAnchorPos(level, pos, state);
+        if (anchorPos != null && level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be && be.getVariant() != null) {
             stack.set(DataComponents.PAINTING_VARIANT, be.getVariant());
         }
         return stack;

@@ -134,7 +134,7 @@ public class PaintingBlock extends HorizontalDirectionalBlock implements EntityB
 
     @Override
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
-        if (level.getBlockEntity(pos) instanceof PaintingBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof PaintingBlockEntity be) {
             be.removeFootprint(level, !player.isCreative(), player);
         }
         return super.playerWillDestroy(level, pos, state, player);
@@ -174,7 +174,7 @@ public class PaintingBlock extends HorizontalDirectionalBlock implements EntityB
     @Override
     protected BlockState updateShape(BlockState state, LevelReader level, ScheduledTickAccess scheduledTickAccess, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, net.minecraft.util.RandomSource random) {
         if (direction.getOpposite() == state.getValue(FACING) && !this.canSurvive(state, level, pos)) {
-            return Blocks.AIR.defaultBlockState();
+            return state.getFluidState().createLegacyBlock();
         }
         if (state.getValue(WATERLOGGED)) {
             scheduledTickAccess.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));

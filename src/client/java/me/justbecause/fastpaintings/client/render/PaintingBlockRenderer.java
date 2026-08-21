@@ -255,7 +255,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
 
     @Override
     public boolean shouldRenderOffScreen() {
-        return true;
+        return false;
     }
 
     @Override
@@ -266,6 +266,6 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
 
     @Override
     public int getViewDistance() {
-        return 16 * 64;
+        return 64;
     }
 }
