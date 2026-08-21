@@ -87,7 +87,7 @@ public class FastPaintingDistantDecorationRenderer implements DecorationClientRe
 
         int lightCoords = 0x00F000F0; // Full ambient light for distant LOD
 
-        RenderType renderType = RenderTypes.entitySolidZOffsetForward(AtlasIds.PAINTINGS);
+        RenderType renderType = RenderTypes.entitySolidZOffsetForward(frontSprite.atlasLocation());
         submitNodeCollector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
             vertex(pose, buffer, x0, y1, frontU0, frontV1, -0.03125F, 0, 0, -1, lightCoords);
             vertex(pose, buffer, x1, y1, frontU1, frontV1, -0.03125F, 0, 0, -1, lightCoords);
