@@ -18,6 +18,7 @@ public class FastPaintingsConfig {
     public boolean convertCommandCreatedPaintings = true;
     public boolean skipSpecialEntityData = true;
     public boolean preserveVariantOnDrop = true;
+    public boolean debugInstrumentation = false;
 
     public static FastPaintingsConfig load() {
         Path configPath = FabricLoader.getInstance().getConfigDir().resolve("fastpaintings.json");

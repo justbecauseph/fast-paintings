@@ -12,9 +12,10 @@ import org.jspecify.annotations.Nullable;
 public class PaintingBlockRenderState extends BlockEntityRenderState {
 
     public enum Lod {
-        FULL,
+        SKIP,
+        FAR,
         SIMPLIFIED,
-        FAR
+        FULL
     }
 
     public Direction direction = Direction.NORTH;
@@ -23,5 +24,6 @@ public class PaintingBlockRenderState extends BlockEntityRenderState {
     public int singleLight;
     public int[] lightCoordsPerBlock = new int[0];
     public @Nullable AABB renderBoundingBox;
+    public double projectedSize;
 }
 

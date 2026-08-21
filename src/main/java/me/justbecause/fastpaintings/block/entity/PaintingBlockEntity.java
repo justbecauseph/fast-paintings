@@ -43,6 +43,9 @@ public class PaintingBlockEntity extends BlockEntity {
 
     private volatile @Nullable PaintingFootprint cachedFootprint;
     private volatile @Nullable AABB cachedRenderBox;
+    private volatile int @Nullable [] cachedLight;
+    private volatile long lastLightUpdateTime = -1;
+    private volatile boolean lightDirty = true;
 
     public PaintingBlockEntity(BlockPos pos, BlockState state) {
         super(ModRegistry.PAINTING_BLOCK_ENTITY, pos, state);
@@ -53,6 +56,7 @@ public class PaintingBlockEntity extends BlockEntity {
         super.setBlockState(blockState);
         this.cachedFootprint = null;
         this.cachedRenderBox = null;
+        this.markLightDirty();
     }
 
     public Direction getFacing() {
@@ -68,10 +72,38 @@ public class PaintingBlockEntity extends BlockEntity {
         this.variant = variant;
         this.cachedFootprint = null;
         this.cachedRenderBox = null;
+        this.markLightDirty();
         this.setChanged();
         if (this.level instanceof ServerLevel serverLevel) {
             serverLevel.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_ALL);
         }
+    }
+
+    public void markLightDirty() {
+        this.lightDirty = true;
+    }
+
+    public boolean isLightDirty(long currentTime, int expectedLength) {
+        return this.lightDirty || this.cachedLight == null || this.cachedLight.length != expectedLength || (currentTime - this.lastLightUpdateTime >= 20);
+    }
+
+    public int[] getOrCreateLightCache(int length) {
+        int[] current = this.cachedLight;
+        if (current == null || current.length != length) {
+            current = new int[length];
+            this.cachedLight = current;
+        }
+        return current;
+    }
+
+    public int @Nullable [] getCachedLight() {
+        return this.cachedLight;
+    }
+
+    public void setCachedLight(int[] light, long time) {
+        this.cachedLight = light;
+        this.lastLightUpdateTime = time;
+        this.lightDirty = false;
     }
 
     public int getPaintingWidth() {
@@ -182,6 +214,7 @@ public class PaintingBlockEntity extends BlockEntity {
         super.loadAdditional(input);
         this.cachedFootprint = null;
         this.cachedRenderBox = null;
+        this.markLightDirty();
         VariantUtils.readVariant(input, Registries.PAINTING_VARIANT).ifPresent(this::setVariant);
     }
 

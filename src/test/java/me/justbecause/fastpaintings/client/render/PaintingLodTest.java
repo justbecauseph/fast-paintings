@@ -3,8 +3,6 @@ package me.justbecause.fastpaintings.client.render;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Direction;
 import net.minecraft.server.Bootstrap;
-import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,33 +19,23 @@ class PaintingLodTest {
         Bootstrap.bootStrap();
     }
 
-    @ParameterizedTest(name = "Distance {0} blocks -> LOD {1}")
+    @ParameterizedTest(name = "Initial projected size {0} px -> LOD {1}")
     @CsvSource({
-            "0.0, FULL",
-            "32.0, FULL",
-            "63.9, FULL",
-            "64.0, SIMPLIFIED",
-            "100.0, SIMPLIFIED",
-            "255.9, SIMPLIFIED",
-            "256.0, FAR",
-            "500.0, FAR",
-            "1000.0, FAR"
+            "0.5, SKIP",
+            "0.99, SKIP",
+            "1.0, FAR",
+            "5.0, FAR",
+            "11.99, FAR",
+            "12.0, SIMPLIFIED",
+            "30.0, SIMPLIFIED",
+            "63.99, SIMPLIFIED",
+            "64.0, FULL",
+            "100.0, FULL",
+            "500.0, FULL"
     })
-    @DisplayName("LOD tier matches squared distance threshold")
-    void testLodDistance(double distance, PaintingBlockRenderState.Lod expectedLod) {
-        AABB box = new AABB(0, 0, 0, 0, 0, 0);
-        Vec3 cameraPos = new Vec3(0, 0, distance);
-
-        double distanceSq = box.distanceToSqr(cameraPos);
-        PaintingBlockRenderState.Lod actualLod;
-        if (distanceSq < 64.0 * 64.0) {
-            actualLod = PaintingBlockRenderState.Lod.FULL;
-        } else if (distanceSq < 256.0 * 256.0) {
-            actualLod = PaintingBlockRenderState.Lod.SIMPLIFIED;
-        } else {
-            actualLod = PaintingBlockRenderState.Lod.FAR;
-        }
-
+    @DisplayName("Initial LOD matches projected pixel size thresholds")
+    void testInitialLodProjectedSize(double projectedSize, PaintingBlockRenderState.Lod expectedLod) {
+        PaintingBlockRenderState.Lod actualLod = PaintingLodManager.classifyLod(projectedSize, null);
         assertEquals(expectedLod, actualLod);
     }
 
@@ -59,5 +47,6 @@ class PaintingLodTest {
         assertEquals(PaintingBlockRenderState.Lod.FULL, state.lod);
         assertEquals(0, state.singleLight);
         assertEquals(0, state.lightCoordsPerBlock.length);
+        assertEquals(0.0, state.projectedSize);
     }
 }
