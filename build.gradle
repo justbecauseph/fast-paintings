@@ -1,91 +1,135 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
-	id 'maven-publish'
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+    id 'com.modrinth.minotaur' version '2.9.0'
 }
 
 version = project.mod_version
 group = project.maven_group
 
 repositories {
-	mavenLocal()
-	maven {
-		name = "Modrinth"
-		url = "https://api.modrinth.com/maven"
-		content {
-			includeGroup "maven.modrinth"
-		}
-	}
-	mavenCentral()
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth"
+        }
+    }
+
+    mavenCentral()
 }
 
 loom {
-	splitEnvironmentSourceSets()
+    splitEnvironmentSourceSets()
 
-	mods {
-		"fastpaintings" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
-		}
-	}
+    mods {
+        "fastpaintings" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
 }
 
 fabricApi {
-	configureTests {
-		createSourceSet = true
-		modId = "fastpaintings-gametest"
+    configureTests {
+        createSourceSet = true
+        modId = "fastpaintings-gametest"
 
-		enableGameTests = true
-		enableClientGameTests = false
+        enableGameTests = true
+        enableClientGameTests = false
 
-		// Required to run server GameTests.
-		eula = true
-	}
+        // Required to run server GameTests.
+        eula = true
+    }
 }
 
 dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
 
-	compileOnly "me.justbecause.distantdecorations:distant-decorations:0.1.0"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
-	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+    // Optional Distant Decorations integration.
+    // DD is published on Modrinth, so clean CI runners can resolve it without mavenLocal().
+    compileOnly "maven.modrinth:distant-decorations:0.1.0"
+
+    // Tests
+    testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
 test {
-	useJUnitPlatform()
+    useJUnitPlatform()
 }
 
 processResources {
-	def version = project.version
-	inputs.property "version", version
+    def version = project.version
 
-	filesMatching("fabric.mod.json") {
-		expand "version": version
-	}
+    inputs.property "version", version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": version
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+    options.release = 25
 }
 
 java {
-	withSourcesJar()
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+    withSourcesJar()
+
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
+    def projectName = project.name
+    inputs.property "projectName", projectName
+}
+
+modrinth {
+    token = System.getenv("MODRINTH_TOKEN")
+    projectId = System.getenv("MODRINTH_PROJECT_ID")
+
+    versionNumber = project.version.toString()
+    versionName = "Fast Paintings ${project.version}"
+    versionType = System.getenv("MODRINTH_VERSION_TYPE") ?: "release"
+
+    // Minecraft 26.2 uses the unobfuscated Loom plugin; the normal jar is the distributable artifact.
+    uploadFile = tasks.jar
+
+    gameVersions = [
+        project.minecraft_version.toString()
+    ]
+
+    loaders = [
+        "fabric"
+    ]
+
+    changelog = System.getenv("MODRINTH_CHANGELOG")
+        ?: "See GitHub release notes."
+
+    dependencies {
+        required.project "fabric-api"
+        optional.project "distant-decorations"
+    }
+
+    // Set MODRINTH_DEBUG=true to inspect the payload without publishing a version.
+    debugMode = Boolean.parseBoolean(
+        System.getenv("MODRINTH_DEBUG") ?: "false"
+    )
+}
+
+// Publishing must not bypass the normal build/tests.
+tasks.named("modrinth") {
+    dependsOn tasks.named("build")
 }
 
 publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-		}
-	}
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
 }
-
