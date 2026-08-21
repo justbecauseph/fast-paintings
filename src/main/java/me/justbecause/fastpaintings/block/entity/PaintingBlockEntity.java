@@ -115,7 +115,7 @@ public class PaintingBlockEntity extends BlockEntity {
             if (pos.equals(this.worldPosition)) {
                 continue;
             }
-            if (!level.hasChunkAt(pos)) {
+            if (!level.isLoaded(pos)) {
                 continue;
             }
             BlockState cellState = level.getBlockState(pos);

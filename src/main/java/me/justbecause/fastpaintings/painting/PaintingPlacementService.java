@@ -105,7 +105,7 @@ public final class PaintingPlacementService {
             return false;
         }
         for (BlockPos pos : footprint.occupiedCells()) {
-            if (!level.hasChunkAt(pos)) {
+            if (!level.isLoaded(pos)) {
                 return false;
             }
             BlockState state = level.getBlockState(pos);

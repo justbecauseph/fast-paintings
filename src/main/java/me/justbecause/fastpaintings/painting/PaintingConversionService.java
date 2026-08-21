@@ -43,7 +43,7 @@ public final class PaintingConversionService {
 
         // Validate all occupied cells are convertible (air, water)
         for (BlockPos pos : footprint.occupiedCells()) {
-            if (!serverLevel.hasChunkAt(pos)) {
+            if (!serverLevel.isLoaded(pos)) {
                 return false;
             }
             BlockState state = serverLevel.getBlockState(pos);
