@@ -30,6 +30,11 @@ public class FastPaintingDistantDecorationRenderer implements DecorationClientRe
     }
 
     @Override
+    public double cullBelowProjectedPixelSize() {
+        return 0.01;
+    }
+
+    @Override
     public DecorationType<FastPaintingDistantData> type() {
         return FastPaintingDistantDecorationProvider.TYPE;
     }
@@ -74,6 +79,17 @@ public class FastPaintingDistantDecorationRenderer implements DecorationClientRe
         double horizontalOffset = (width % 2 == 0) ? 0.5 : 0.0;
         double verticalOffset = (height % 2 == 0) ? 0.5 : 0.0;
         poseStack.translate(horizontalOffset, verticalOffset, 0.46875);
+
+        // Far-LOD visual footprint scaling: ensure subpixel quad maintains ~1px rasterizable footprint
+        double targetMinPixelSize = 1.0;
+        double visualScale = 1.0;
+        if (projectedPixelSize > 0 && projectedPixelSize < targetMinPixelSize) {
+            visualScale = Math.min(16.0, targetMinPixelSize / projectedPixelSize);
+            me.justbecause.distantdecorations.telemetry.TelemetryMetrics.clientFarLodScaledRenders++;
+        }
+        if (visualScale > 1.0) {
+            poseStack.scale((float) visualScale, (float) visualScale, 1.0F);
+        }
 
         float x0 = width / 2.0F;
         float x1 = -width / 2.0F;
