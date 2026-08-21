@@ -3,8 +3,6 @@ package me.justbecause.fastpaintings.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import me.justbecause.fastpaintings.block.entity.PaintingBlockEntity;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -37,7 +35,6 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
 
     private static final Identifier BACK_SPRITE_LOCATION = Identifier.withDefaultNamespace("back");
     private final @Nullable TextureAtlas paintingsAtlas;
-    private final Long2ObjectMap<PaintingBlockRenderState.Lod> previousLodMap = new Long2ObjectOpenHashMap<>();
 
     public PaintingBlockRenderer(BlockEntityRendererProvider.Context context) {
         if (context.sprites() instanceof AtlasManager atlasManager) {
@@ -63,7 +60,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
         BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTick, cameraPosition, crumblingOverlay);
 
         if (PaintingInstrumentation.isEnabled()) {
-            PaintingInstrumentation.paintingsExtracted++;
+            PaintingInstrumentation.totalExtractions++;
         }
 
         state.direction = blockEntity.getFacing();
@@ -85,14 +82,14 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
         Minecraft mc = Minecraft.getInstance();
         PaintingRenderMetrics metrics = PaintingRenderMetrics.getInstance();
         if (mc != null && mc.gameRenderer != null && mc.gameRenderer.mainCamera() != null) {
-            metrics.update(mc, mc.gameRenderer.mainCamera(), level.getGameTime());
+            metrics.update(mc, mc.gameRenderer.mainCamera());
         }
 
         // Secondary frustum check inside extractRenderState ahead of any lighting
         if (metrics.currentFrustum != null && state.renderBoundingBox != null && !metrics.currentFrustum.isVisible(state.renderBoundingBox)) {
             state.lod = PaintingBlockRenderState.Lod.SKIP;
             if (PaintingInstrumentation.isEnabled()) {
-                PaintingInstrumentation.skipCount++;
+                PaintingInstrumentation.totalSkipCount++;
             }
             return;
         }
@@ -105,34 +102,34 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
         double projectedSize = metrics.calculateProjectedSize(worldSize, distance);
         state.projectedSize = projectedSize;
 
-        long posLong = blockEntity.getBlockPos().asLong();
-        PaintingBlockRenderState.Lod prevLod = this.previousLodMap.get(posLong);
+        // Query transient previous LOD from BE and update it
+        PaintingBlockRenderState.Lod prevLod = blockEntity.getLastRenderLod();
         state.lod = PaintingLodManager.classifyLod(projectedSize, prevLod);
-        this.previousLodMap.put(posLong, state.lod);
+        blockEntity.setLastRenderLod(state.lod);
 
         switch (state.lod) {
             case SKIP -> {
                 if (PaintingInstrumentation.isEnabled()) {
-                    PaintingInstrumentation.skipCount++;
+                    PaintingInstrumentation.totalSkipCount++;
                 }
             }
             case FAR -> {
                 if (PaintingInstrumentation.isEnabled()) {
-                    PaintingInstrumentation.farCount++;
-                    PaintingInstrumentation.singleLightSamples++;
+                    PaintingInstrumentation.totalFarCount++;
+                    PaintingInstrumentation.totalSingleLightSamples++;
                 }
                 state.singleLight = LightCoordsUtil.getLightCoords(level, blockEntity.getBlockPos());
             }
             case SIMPLIFIED -> {
                 if (PaintingInstrumentation.isEnabled()) {
-                    PaintingInstrumentation.simplifiedCount++;
-                    PaintingInstrumentation.singleLightSamples++;
+                    PaintingInstrumentation.totalSimplifiedCount++;
+                    PaintingInstrumentation.totalSingleLightSamples++;
                 }
                 state.singleLight = LightCoordsUtil.getLightCoords(level, blockEntity.getBlockPos());
             }
             case FULL -> {
                 if (PaintingInstrumentation.isEnabled()) {
-                    PaintingInstrumentation.fullCount++;
+                    PaintingInstrumentation.totalFullCount++;
                 }
                 this.extractFullLighting(blockEntity, state, level, variant, width, height);
             }
@@ -189,7 +186,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
             }
             blockEntity.setCachedLight(cached, gameTime);
             if (PaintingInstrumentation.isEnabled()) {
-                PaintingInstrumentation.perBlockLightSamples += totalSegments;
+                PaintingInstrumentation.totalPerBlockLightSamples += totalSegments;
             }
         }
 
@@ -212,7 +209,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
 
         if (camera.cullFrustum != null && state.renderBoundingBox != null && !camera.cullFrustum.isVisible(state.renderBoundingBox)) {
             if (PaintingInstrumentation.isEnabled()) {
-                PaintingInstrumentation.lateFrustumRejects++;
+                PaintingInstrumentation.totalLateFrustumRejects++;
             }
             return;
         }
@@ -236,10 +233,10 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
             switch (state.lod) {
                 case FULL -> {
                     if (PaintingInstrumentation.isEnabled()) {
-                        PaintingInstrumentation.customGeometrySubmissions++;
+                        PaintingInstrumentation.totalCustomGeometrySubmissions++;
                         int quads = 2 * width * height + 2 * width + 2 * height;
-                        PaintingInstrumentation.quadsSubmitted += quads;
-                        PaintingInstrumentation.verticesSubmitted += quads * 4;
+                        PaintingInstrumentation.totalQuadsSubmitted += quads;
+                        PaintingInstrumentation.totalVerticesSubmitted += quads * 4;
                     }
                     this.renderFull(
                             poseStack,
@@ -254,9 +251,9 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
                 }
                 case SIMPLIFIED -> {
                     if (PaintingInstrumentation.isEnabled()) {
-                        PaintingInstrumentation.customGeometrySubmissions++;
-                        PaintingInstrumentation.quadsSubmitted += 6;
-                        PaintingInstrumentation.verticesSubmitted += 24;
+                        PaintingInstrumentation.totalCustomGeometrySubmissions++;
+                        PaintingInstrumentation.totalQuadsSubmitted += 6;
+                        PaintingInstrumentation.totalVerticesSubmitted += 24;
                     }
                     this.renderSimplified(
                             poseStack,
@@ -271,9 +268,9 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
                 }
                 case FAR -> {
                     if (PaintingInstrumentation.isEnabled()) {
-                        PaintingInstrumentation.customGeometrySubmissions++;
-                        PaintingInstrumentation.quadsSubmitted += 1;
-                        PaintingInstrumentation.verticesSubmitted += 4;
+                        PaintingInstrumentation.totalCustomGeometrySubmissions++;
+                        PaintingInstrumentation.totalQuadsSubmitted += 1;
+                        PaintingInstrumentation.totalVerticesSubmitted += 4;
                     }
                     this.renderFar(
                             poseStack,
@@ -504,7 +501,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
     @Override
     public boolean shouldRender(PaintingBlockEntity blockEntity, Vec3 cameraPos) {
         if (PaintingInstrumentation.isEnabled()) {
-            PaintingInstrumentation.loadedPaintings++;
+            PaintingInstrumentation.totalLoaded++;
         }
 
         if (blockEntity.isRemoved() || blockEntity.getLevel() == null) {
@@ -524,7 +521,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
 
         if (frustum != null && !frustum.isVisible(renderBox)) {
             if (PaintingInstrumentation.isEnabled()) {
-                PaintingInstrumentation.earlyFrustumRejects++;
+                PaintingInstrumentation.totalEarlyFrustumRejects++;
             }
             return false;
         }

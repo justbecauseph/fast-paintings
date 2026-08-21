@@ -9,19 +9,20 @@ public final class PaintingInstrumentation {
 
     public static boolean forceEnabled = false;
 
-    public static int loadedPaintings;
-    public static int paintingsExtracted;
-    public static int earlyFrustumRejects;
-    public static int lateFrustumRejects;
-    public static int skipCount;
-    public static int farCount;
-    public static int simplifiedCount;
-    public static int fullCount;
-    public static int perBlockLightSamples;
-    public static int singleLightSamples;
-    public static int customGeometrySubmissions;
-    public static int quadsSubmitted;
-    public static int verticesSubmitted;
+    // Cumulative counters (long) for reliable profiling and snapshot diffing
+    public static long totalLoaded;
+    public static long totalExtractions;
+    public static long totalEarlyFrustumRejects;
+    public static long totalLateFrustumRejects;
+    public static long totalSkipCount;
+    public static long totalFarCount;
+    public static long totalSimplifiedCount;
+    public static long totalFullCount;
+    public static long totalPerBlockLightSamples;
+    public static long totalSingleLightSamples;
+    public static long totalCustomGeometrySubmissions;
+    public static long totalQuadsSubmitted;
+    public static long totalVerticesSubmitted;
 
     private PaintingInstrumentation() {}
 
@@ -29,53 +30,107 @@ public final class PaintingInstrumentation {
         return forceEnabled || (FastPaintings.CONFIG != null && FastPaintings.CONFIG.debugInstrumentation);
     }
 
-    public static void resetFrame() {
-        loadedPaintings = 0;
-        paintingsExtracted = 0;
-        earlyFrustumRejects = 0;
-        lateFrustumRejects = 0;
-        skipCount = 0;
-        farCount = 0;
-        simplifiedCount = 0;
-        fullCount = 0;
-        perBlockLightSamples = 0;
-        singleLightSamples = 0;
-        customGeometrySubmissions = 0;
-        quadsSubmitted = 0;
-        verticesSubmitted = 0;
+    public static void reset() {
+        totalLoaded = 0;
+        totalExtractions = 0;
+        totalEarlyFrustumRejects = 0;
+        totalLateFrustumRejects = 0;
+        totalSkipCount = 0;
+        totalFarCount = 0;
+        totalSimplifiedCount = 0;
+        totalFullCount = 0;
+        totalPerBlockLightSamples = 0;
+        totalSingleLightSamples = 0;
+        totalCustomGeometrySubmissions = 0;
+        totalQuadsSubmitted = 0;
+        totalVerticesSubmitted = 0;
     }
 
-    public static String getFormattedDebugOutput() {
-        return String.format(
-                """
-                Fast Paintings:
-
-                Loaded:                   %d
-                Early frustum rejects:    %d
-                Late frustum rejects:     %d
-                SKIP:                     %d
-                FAR:                      %d
-                SIMPLIFIED:               %d
-                FULL:                     %d
-
-                Per-block light samples:  %d
-                Single light samples:     %d
-                Geometry submissions:     %d
-                Quads submitted:          %d
-                Vertices submitted:       %d
-                """,
-                loadedPaintings,
-                earlyFrustumRejects,
-                lateFrustumRejects,
-                skipCount,
-                farCount,
-                simplifiedCount,
-                fullCount,
-                perBlockLightSamples,
-                singleLightSamples,
-                customGeometrySubmissions,
-                quadsSubmitted,
-                verticesSubmitted
+    public static Snapshot takeSnapshot() {
+        return new Snapshot(
+                totalLoaded,
+                totalExtractions,
+                totalEarlyFrustumRejects,
+                totalLateFrustumRejects,
+                totalSkipCount,
+                totalFarCount,
+                totalSimplifiedCount,
+                totalFullCount,
+                totalPerBlockLightSamples,
+                totalSingleLightSamples,
+                totalCustomGeometrySubmissions,
+                totalQuadsSubmitted,
+                totalVerticesSubmitted
         );
+    }
+
+    public record Snapshot(
+            long loaded,
+            long extractions,
+            long earlyFrustumRejects,
+            long lateFrustumRejects,
+            long skipCount,
+            long farCount,
+            long simplifiedCount,
+            long fullCount,
+            long perBlockLightSamples,
+            long singleLightSamples,
+            long customGeometrySubmissions,
+            long quadsSubmitted,
+            long verticesSubmitted
+    ) {
+        public Snapshot delta(Snapshot previous) {
+            return new Snapshot(
+                    this.loaded - previous.loaded,
+                    this.extractions - previous.extractions,
+                    this.earlyFrustumRejects - previous.earlyFrustumRejects,
+                    this.lateFrustumRejects - previous.lateFrustumRejects,
+                    this.skipCount - previous.skipCount,
+                    this.farCount - previous.farCount,
+                    this.simplifiedCount - previous.simplifiedCount,
+                    this.fullCount - previous.fullCount,
+                    this.perBlockLightSamples - previous.perBlockLightSamples,
+                    this.singleLightSamples - previous.singleLightSamples,
+                    this.customGeometrySubmissions - previous.customGeometrySubmissions,
+                    this.quadsSubmitted - previous.quadsSubmitted,
+                    this.verticesSubmitted - previous.verticesSubmitted
+            );
+        }
+
+        public String toFormattedString() {
+            return String.format(
+                    """
+                    Fast Paintings:
+
+                    Loaded:                   %d
+                    Extracted:                %d
+                    Early frustum rejects:    %d
+                    Late frustum rejects:     %d
+                    SKIP:                     %d
+                    FAR:                      %d
+                    SIMPLIFIED:               %d
+                    FULL:                     %d
+
+                    Per-block light samples:  %d
+                    Single light samples:     %d
+                    Geometry submissions:     %d
+                    Quads submitted:          %d
+                    Vertices submitted:       %d
+                    """,
+                    loaded,
+                    extractions,
+                    earlyFrustumRejects,
+                    lateFrustumRejects,
+                    skipCount,
+                    farCount,
+                    simplifiedCount,
+                    fullCount,
+                    perBlockLightSamples,
+                    singleLightSamples,
+                    customGeometrySubmissions,
+                    quadsSubmitted,
+                    verticesSubmitted
+            );
+        }
     }
 }

@@ -28,13 +28,10 @@ class PaintingRenderMetricsTest {
     @Test
     @DisplayName("Projected size scales linearly with world size and inversely with distance")
     void testProjectedSizeScaling() {
-        // 1x1 painting at 100m
         double size1x1at100 = metrics.calculateProjectedSize(1.0, 100.0);
-        // 16x16 painting at 100m should be 16x larger
         double size16x16at100 = metrics.calculateProjectedSize(16.0, 100.0);
         assertEquals(size1x1at100 * 16.0, size16x16at100, 0.001);
 
-        // 1x1 painting at 50m should be 2x larger than at 100m
         double size1x1at50 = metrics.calculateProjectedSize(1.0, 50.0);
         assertEquals(size1x1at100 * 2.0, size1x1at50, 0.001);
     }
@@ -52,13 +49,10 @@ class PaintingRenderMetricsTest {
     @Test
     @DisplayName("Large painting is visible at much greater distance than small painting")
     void testLargePaintingVisibilityAdvantage() {
-        // At 200m:
-        // 1x1 painting: projected size ~ 3.8 px (FAR)
         double size1x1 = metrics.calculateProjectedSize(1.0, 200.0);
         PaintingBlockRenderState.Lod lod1x1 = PaintingLodManager.classifyLod(size1x1, null);
         assertEquals(PaintingBlockRenderState.Lod.FAR, lod1x1);
 
-        // 16x16 painting at 200m: projected size ~ 61.7 px (SIMPLIFIED or FULL)
         double size16x16 = metrics.calculateProjectedSize(16.0, 200.0);
         PaintingBlockRenderState.Lod lod16x16 = PaintingLodManager.classifyLod(size16x16, null);
         assertEquals(PaintingBlockRenderState.Lod.SIMPLIFIED, lod16x16);

@@ -46,6 +46,7 @@ public class PaintingBlockEntity extends BlockEntity {
     private volatile int @Nullable [] cachedLight;
     private volatile long lastLightUpdateTime = -1;
     private volatile boolean lightDirty = true;
+    private transient @Nullable Object lastRenderLod;
 
     public PaintingBlockEntity(BlockPos pos, BlockState state) {
         super(ModRegistry.PAINTING_BLOCK_ENTITY, pos, state);
@@ -104,6 +105,15 @@ public class PaintingBlockEntity extends BlockEntity {
         this.cachedLight = light;
         this.lastLightUpdateTime = time;
         this.lightDirty = false;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> @Nullable T getLastRenderLod() {
+        return (T) this.lastRenderLod;
+    }
+
+    public void setLastRenderLod(@Nullable Object lod) {
+        this.lastRenderLod = lod;
     }
 
     public int getPaintingWidth() {

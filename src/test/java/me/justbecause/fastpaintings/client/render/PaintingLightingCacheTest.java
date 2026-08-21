@@ -81,4 +81,17 @@ class PaintingLightingCacheTest {
         assertEquals(256, resized.length);
         assertTrue(be.isLightDirty(105, 256));
     }
+
+    @Test
+    @DisplayName("PaintingBlockEntity maintains transient lastRenderLod without persisting")
+    void testTransientRenderLod() {
+        PaintingBlockEntity be = new PaintingBlockEntity(BlockPos.ZERO, ModRegistry.PAINTING_BLOCK.defaultBlockState());
+        assertNull(be.getLastRenderLod());
+
+        be.setLastRenderLod(PaintingBlockRenderState.Lod.SIMPLIFIED);
+        assertEquals(PaintingBlockRenderState.Lod.SIMPLIFIED, be.getLastRenderLod());
+
+        be.setLastRenderLod(PaintingBlockRenderState.Lod.FULL);
+        assertEquals(PaintingBlockRenderState.Lod.FULL, be.getLastRenderLod());
+    }
 }

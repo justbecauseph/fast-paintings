@@ -10,61 +10,71 @@ class PaintingInstrumentationTest {
 
     @BeforeEach
     void setup() {
-        PaintingInstrumentation.resetFrame();
+        PaintingInstrumentation.reset();
     }
 
     @Test
-    @DisplayName("Reset frame clears all metrics counters")
-    void testResetFrame() {
-        PaintingInstrumentation.loadedPaintings = 100;
-        PaintingInstrumentation.earlyFrustumRejects = 50;
-        PaintingInstrumentation.lateFrustumRejects = 5;
-        PaintingInstrumentation.skipCount = 20;
-        PaintingInstrumentation.farCount = 10;
-        PaintingInstrumentation.simplifiedCount = 10;
-        PaintingInstrumentation.fullCount = 5;
-        PaintingInstrumentation.perBlockLightSamples = 128;
-        PaintingInstrumentation.singleLightSamples = 20;
-        PaintingInstrumentation.customGeometrySubmissions = 25;
-        PaintingInstrumentation.quadsSubmitted = 150;
-        PaintingInstrumentation.verticesSubmitted = 600;
+    @DisplayName("Reset clears all cumulative metrics counters")
+    void testReset() {
+        PaintingInstrumentation.totalLoaded = 100;
+        PaintingInstrumentation.totalExtractions = 90;
+        PaintingInstrumentation.totalEarlyFrustumRejects = 50;
+        PaintingInstrumentation.totalLateFrustumRejects = 5;
+        PaintingInstrumentation.totalSkipCount = 20;
+        PaintingInstrumentation.totalFarCount = 10;
+        PaintingInstrumentation.totalSimplifiedCount = 10;
+        PaintingInstrumentation.totalFullCount = 5;
+        PaintingInstrumentation.totalPerBlockLightSamples = 128;
+        PaintingInstrumentation.totalSingleLightSamples = 20;
+        PaintingInstrumentation.totalCustomGeometrySubmissions = 25;
+        PaintingInstrumentation.totalQuadsSubmitted = 150;
+        PaintingInstrumentation.totalVerticesSubmitted = 600;
 
-        PaintingInstrumentation.resetFrame();
+        PaintingInstrumentation.reset();
 
-        assertEquals(0, PaintingInstrumentation.loadedPaintings);
-        assertEquals(0, PaintingInstrumentation.earlyFrustumRejects);
-        assertEquals(0, PaintingInstrumentation.lateFrustumRejects);
-        assertEquals(0, PaintingInstrumentation.skipCount);
-        assertEquals(0, PaintingInstrumentation.farCount);
-        assertEquals(0, PaintingInstrumentation.simplifiedCount);
-        assertEquals(0, PaintingInstrumentation.fullCount);
-        assertEquals(0, PaintingInstrumentation.perBlockLightSamples);
-        assertEquals(0, PaintingInstrumentation.singleLightSamples);
-        assertEquals(0, PaintingInstrumentation.customGeometrySubmissions);
-        assertEquals(0, PaintingInstrumentation.quadsSubmitted);
-        assertEquals(0, PaintingInstrumentation.verticesSubmitted);
+        assertEquals(0, PaintingInstrumentation.totalLoaded);
+        assertEquals(0, PaintingInstrumentation.totalExtractions);
+        assertEquals(0, PaintingInstrumentation.totalEarlyFrustumRejects);
+        assertEquals(0, PaintingInstrumentation.totalLateFrustumRejects);
+        assertEquals(0, PaintingInstrumentation.totalSkipCount);
+        assertEquals(0, PaintingInstrumentation.totalFarCount);
+        assertEquals(0, PaintingInstrumentation.totalSimplifiedCount);
+        assertEquals(0, PaintingInstrumentation.totalFullCount);
+        assertEquals(0, PaintingInstrumentation.totalPerBlockLightSamples);
+        assertEquals(0, PaintingInstrumentation.totalSingleLightSamples);
+        assertEquals(0, PaintingInstrumentation.totalCustomGeometrySubmissions);
+        assertEquals(0, PaintingInstrumentation.totalQuadsSubmitted);
+        assertEquals(0, PaintingInstrumentation.totalVerticesSubmitted);
     }
 
     @Test
-    @DisplayName("Formatted debug output contains all tracked fields")
-    void testFormattedOutput() {
-        PaintingInstrumentation.loadedPaintings = 3120;
-        PaintingInstrumentation.earlyFrustumRejects = 2470;
-        PaintingInstrumentation.skipCount = 310;
-        PaintingInstrumentation.farCount = 210;
-        PaintingInstrumentation.simplifiedCount = 92;
-        PaintingInstrumentation.fullCount = 38;
-        PaintingInstrumentation.perBlockLightSamples = 684;
-        PaintingInstrumentation.singleLightSamples = 302;
+    @DisplayName("Snapshots calculate deltas accurately for benchmark windows")
+    void testSnapshotDelta() {
+        PaintingInstrumentation.totalLoaded = 100;
+        PaintingInstrumentation.totalExtractions = 80;
+        PaintingInstrumentation.totalEarlyFrustumRejects = 20;
+        PaintingInstrumentation.totalPerBlockLightSamples = 256;
 
-        String output = PaintingInstrumentation.getFormattedDebugOutput();
-        assertTrue(output.contains("Loaded:                   3120"));
-        assertTrue(output.contains("Early frustum rejects:    2470"));
-        assertTrue(output.contains("SKIP:                     310"));
-        assertTrue(output.contains("FAR:                      210"));
-        assertTrue(output.contains("SIMPLIFIED:               92"));
-        assertTrue(output.contains("FULL:                     38"));
-        assertTrue(output.contains("Per-block light samples:  684"));
-        assertTrue(output.contains("Single light samples:     302"));
+        PaintingInstrumentation.Snapshot start = PaintingInstrumentation.takeSnapshot();
+
+        // Simulate benchmark frames
+        PaintingInstrumentation.totalLoaded += 3000;
+        PaintingInstrumentation.totalExtractions += 600;
+        PaintingInstrumentation.totalEarlyFrustumRejects += 2400;
+        PaintingInstrumentation.totalPerBlockLightSamples += 512;
+
+        PaintingInstrumentation.Snapshot end = PaintingInstrumentation.takeSnapshot();
+        PaintingInstrumentation.Snapshot delta = end.delta(start);
+
+        assertEquals(3000, delta.loaded());
+        assertEquals(600, delta.extractions());
+        assertEquals(2400, delta.earlyFrustumRejects());
+        assertEquals(512, delta.perBlockLightSamples());
+
+        String formatted = delta.toFormattedString();
+        assertTrue(formatted.contains("Loaded:                   3000"));
+        assertTrue(formatted.contains("Extracted:                600"));
+        assertTrue(formatted.contains("Early frustum rejects:    2400"));
+        assertTrue(formatted.contains("Per-block light samples:  512"));
     }
 }
