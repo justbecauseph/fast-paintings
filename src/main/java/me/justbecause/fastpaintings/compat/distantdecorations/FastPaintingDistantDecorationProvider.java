@@ -24,7 +24,7 @@ public class FastPaintingDistantDecorationProvider implements DecorationProvider
     public static final DecorationType<FastPaintingDistantData> TYPE = new DecorationType<>(
         TYPE_ID,
         (data, buf) -> {
-            buf.writeIdentifier(data.variantId());
+            buf.writeIdentifier(data.assetId());
             buf.writeByte(data.direction().get2DDataValue());
             buf.writeVarInt(data.width());
             buf.writeVarInt(data.height());
@@ -59,12 +59,9 @@ public class FastPaintingDistantDecorationProvider implements DecorationProvider
                 return null;
             }
             Identifier variantId = variantHolder.unwrapKey().map(k -> k.identifier()).orElse(null);
-            if (variantId == null) {
-                return null;
-            }
             Direction facing = pbe.getBlockState().getValue(PaintingBlock.FACING);
             PaintingVariant variant = variantHolder.value();
-            return new FastPaintingDistantData(variantId, facing, variant.width(), variant.height());
+            return new FastPaintingDistantData(variant.assetId(), facing, variant.width(), variant.height());
         }
         return null;
     }
