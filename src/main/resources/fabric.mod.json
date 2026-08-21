@@ -16,9 +16,6 @@
     ],
     "client": [
       "me.justbecause.fastpaintings.client.FastPaintingsClient"
-    ],
-    "fabric-gametest": [
-      "me.justbecause.fastpaintings.test.FastPaintingsGameTests"
     ]
   },
   "mixins": [

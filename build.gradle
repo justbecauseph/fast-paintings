@@ -28,6 +28,19 @@ loom {
 	}
 }
 
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "fastpaintings-gametest"
+
+		enableGameTests = true
+		enableClientGameTests = false
+
+		// Required to run server GameTests.
+		eula = true
+	}
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
