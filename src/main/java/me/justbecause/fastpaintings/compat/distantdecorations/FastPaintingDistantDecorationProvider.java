@@ -59,7 +59,7 @@ public class FastPaintingDistantDecorationProvider implements DecorationProvider
                 return null;
             }
             Identifier variantId = variantHolder.unwrapKey().map(k -> k.identifier()).orElse(null);
-            Direction facing = pbe.getBlockState().getValue(PaintingBlock.FACING);
+            Direction facing = pbe.getFacing();
             PaintingVariant variant = variantHolder.value();
             return new FastPaintingDistantData(variant.assetId(), facing, variant.width(), variant.height());
         }

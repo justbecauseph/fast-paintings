@@ -75,8 +75,8 @@ public class FastPaintingDistantDecorationRenderer implements DecorationClientRe
         double verticalOffset = (height % 2 == 0) ? 0.5 : 0.0;
         poseStack.translate(horizontalOffset, verticalOffset, 0.46875);
 
-        float x0 = -width / 2.0F;
-        float x1 = width / 2.0F;
+        float x0 = width / 2.0F;
+        float x1 = -width / 2.0F;
         float y0 = height / 2.0F;
         float y1 = -height / 2.0F;
 
