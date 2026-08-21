@@ -1,5 +1,6 @@
 package me.justbecause.fastpaintings.block.entity;
 
+import me.justbecause.fastpaintings.FastPaintings;
 import me.justbecause.fastpaintings.block.PaintingBlock;
 import me.justbecause.fastpaintings.block.PaintingPartBlock;
 import me.justbecause.fastpaintings.init.ModRegistry;
@@ -8,12 +9,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -41,6 +42,9 @@ public class PaintingBlockEntity extends BlockEntity {
     private @Nullable Holder<PaintingVariant> variant;
     private boolean isRemoving = false;
 
+    private volatile @Nullable PaintingFootprint cachedFootprint;
+    private volatile @Nullable AABB cachedRenderBox;
+
     public PaintingBlockEntity(BlockPos pos, BlockState state) {
         super(ModRegistry.PAINTING_BLOCK_ENTITY, pos, state);
     }
@@ -56,6 +60,8 @@ public class PaintingBlockEntity extends BlockEntity {
 
     public void setVariant(@Nullable Holder<PaintingVariant> variant) {
         this.variant = variant;
+        this.cachedFootprint = null;
+        this.cachedRenderBox = null;
         this.setChanged();
         if (this.level instanceof ServerLevel serverLevel) {
             serverLevel.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), Block.UPDATE_ALL);
@@ -71,11 +77,22 @@ public class PaintingBlockEntity extends BlockEntity {
     }
 
     public PaintingFootprint getFootprint() {
-        return PaintingFootprint.of(this.worldPosition, this.getFacing(), this.getPaintingWidth(), this.getPaintingHeight());
+        PaintingFootprint fp = this.cachedFootprint;
+        if (fp == null) {
+            fp = PaintingFootprint.of(this.worldPosition, this.getFacing(), this.getPaintingWidth(), this.getPaintingHeight());
+            this.cachedFootprint = fp;
+            this.cachedRenderBox = fp.boundingBox().inflate(0.5);
+        }
+        return fp;
     }
 
     public AABB getRenderBoundingBox() {
-        return this.getFootprint().boundingBox().inflate(0.5);
+        AABB box = this.cachedRenderBox;
+        if (box == null) {
+            getFootprint();
+            box = this.cachedRenderBox;
+        }
+        return box != null ? box : new AABB(this.worldPosition);
     }
 
     /**
@@ -98,6 +115,9 @@ public class PaintingBlockEntity extends BlockEntity {
             if (pos.equals(this.worldPosition)) {
                 continue;
             }
+            if (!level.hasChunkAt(pos)) {
+                continue;
+            }
             BlockState cellState = level.getBlockState(pos);
             if (cellState.is(ModRegistry.PAINTING_PART_BLOCK)) {
                 BlockPos anchorPos = PaintingPartBlock.getAnchorPos(pos, cellState);
@@ -117,8 +137,8 @@ public class PaintingBlockEntity extends BlockEntity {
                 Direction facing = this.getFacing();
                 Vec3 center = this.getFootprint().boundingBox().getCenter();
                 ItemStack stack = new ItemStack(Items.PAINTING);
-                if (me.justbecause.fastpaintings.FastPaintings.CONFIG.preserveVariantOnDrop && this.variant != null) {
-                    stack.set(net.minecraft.core.component.DataComponents.PAINTING_VARIANT, this.variant);
+                if (FastPaintings.CONFIG.preserveVariantOnDrop && this.variant != null) {
+                    stack.set(DataComponents.PAINTING_VARIANT, this.variant);
                 }
                 ItemEntity itemEntity = new ItemEntity(
                         serverLevel,
@@ -144,6 +164,8 @@ public class PaintingBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
+        this.cachedFootprint = null;
+        this.cachedRenderBox = null;
         VariantUtils.readVariant(input, Registries.PAINTING_VARIANT).ifPresent(this::setVariant);
     }
 

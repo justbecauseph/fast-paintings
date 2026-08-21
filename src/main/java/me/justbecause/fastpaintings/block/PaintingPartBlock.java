@@ -180,11 +180,9 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
     @Override
     protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         ItemStack stack = new ItemStack(Items.PAINTING);
-        if (includeData) {
-            BlockPos anchorPos = getAnchorPos(pos, state);
-            if (level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be && be.getVariant() != null) {
-                stack.set(DataComponents.PAINTING_VARIANT, be.getVariant());
-            }
+        BlockPos anchorPos = getAnchorPos(pos, state);
+        if (level.getBlockEntity(anchorPos) instanceof PaintingBlockEntity be && be.getVariant() != null) {
+            stack.set(DataComponents.PAINTING_VARIANT, be.getVariant());
         }
         return stack;
     }

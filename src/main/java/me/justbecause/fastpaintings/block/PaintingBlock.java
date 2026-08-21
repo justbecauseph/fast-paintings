@@ -189,7 +189,7 @@ public class PaintingBlock extends HorizontalDirectionalBlock implements EntityB
     @Override
     protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         ItemStack stack = new ItemStack(Items.PAINTING);
-        if (includeData && level.getBlockEntity(pos) instanceof PaintingBlockEntity be && be.getVariant() != null) {
+        if (level.getBlockEntity(pos) instanceof PaintingBlockEntity be && be.getVariant() != null) {
             stack.set(DataComponents.PAINTING_VARIANT, be.getVariant());
         }
         return stack;

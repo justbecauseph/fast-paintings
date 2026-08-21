@@ -88,6 +88,7 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
         double centerY = anchorPos.getY() + 0.5 + verticalOffset;
         double centerZ = anchorPos.getZ() + 0.5 + left.getStepZ() * horizontalOffset;
 
+        BlockPos.MutableBlockPos samplePos = new BlockPos.MutableBlockPos();
         for (int segmentY = 0; segmentY < height; segmentY++) {
             for (int segmentX = 0; segmentX < width; segmentX++) {
                 float segmentOffsetX = segmentX + offsetX + 0.5F;
@@ -102,7 +103,8 @@ public class PaintingBlockRenderer implements BlockEntityRenderer<PaintingBlockE
                     case EAST -> z = (int) Math.floor(centerZ + segmentOffsetX);
                 }
 
-                state.lightCoordsPerBlock[segmentX + segmentY * width] = LightCoordsUtil.getLightCoords(level, new BlockPos(x, y, z));
+                samplePos.set(x, y, z);
+                state.lightCoordsPerBlock[segmentX + segmentY * width] = LightCoordsUtil.getLightCoords(level, samplePos);
             }
         }
     }
