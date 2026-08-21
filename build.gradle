@@ -50,8 +50,7 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     // Optional Distant Decorations API integration.
-    // Compile against the exact published Modrinth version without requiring DD at runtime.
-    modCompileOnly "maven.modrinth:distant-decorations:RH6HElMj"
+    compileOnly "maven.modrinth:distant-decorations:RH6HElMj"
 
     // Tests
     testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
