@@ -9,6 +9,14 @@ group = project.maven_group
 
 repositories {
     maven {
+        name = "JustBecause Public Maven"
+        url = "https://justbecauseph.github.io/maven/"
+        content {
+            includeGroup "me.justbecause.distantdecorations"
+        }
+    }
+
+    maven {
         name = "Modrinth"
         url = "https://api.modrinth.com/maven"
         content {
@@ -50,7 +58,8 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     // Optional Distant Decorations API integration.
-    compileOnly "maven.modrinth:distant-decorations:RH6HElMj"
+    // Compile against the stable public Maven coordinate without requiring DD at runtime.
+    compileOnly "me.justbecause.distantdecorations:distant-decorations:0.1.0"
 
     // Tests
     testImplementation "org.junit.jupiter:junit-jupiter:5.11.4"
