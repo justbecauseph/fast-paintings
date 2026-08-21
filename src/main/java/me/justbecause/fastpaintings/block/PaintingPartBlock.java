@@ -107,6 +107,7 @@ public class PaintingPartBlock extends HorizontalDirectionalBlock implements Sim
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         Direction facing = state.getValue(FACING);
         BlockPos backingPos = pos.relative(facing.getOpposite());

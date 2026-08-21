@@ -115,6 +115,7 @@ public class PaintingBlock extends HorizontalDirectionalBlock implements EntityB
     }
 
     @Override
+    @SuppressWarnings("deprecation")
     protected boolean canSurvive(BlockState state, LevelReader level, BlockPos pos) {
         Direction facing = state.getValue(FACING);
         BlockPos backingPos = pos.relative(facing.getOpposite());

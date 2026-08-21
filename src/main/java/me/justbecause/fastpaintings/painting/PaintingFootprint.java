@@ -147,7 +147,9 @@ public record PaintingFootprint(
 
     /**
      * Returns true if all backing support cells meet vanilla solid / diode requirements.
+     * Matches vanilla Minecraft 26.2 {@code HangingEntity#survives} contract exactly.
      */
+    @SuppressWarnings("deprecation")
     public boolean isSupported(LevelReader level) {
         for (BlockPos pos : this.supportCells) {
             BlockState state = level.getBlockState(pos);
